@@ -91,16 +91,18 @@ game = do
   SDL.glMakeCurrent window renderer
 
   print "Creating VAO"
-  let vao = nullPtr @ GL.GLuint
-  GL.glGenVertexArrays 1 vao
-  vaoId <- peek vao
-  print $ "vao id is: " <> show vaoId
-  GL.glBindVertexArray =<< peek vao
+  vao <- newArray @StorableArray (0,0) (0 :: GL.GLuint)
+  withStorableArray vao $ \vaoPtr -> do
+    GL.glGenVertexArrays 1 vaoPtr
+    x <- readArray vao 0
+    GL.glBindVertexArray x
 
   print "Creating VBO"
-  let vbo = nullPtr @ GL.GLuint
-  GL.glGenBuffers 1 vbo
-  GL.glBindBuffer GL.GL_ARRAY_BUFFER =<< peek vbo
+  vbo <- newArray @StorableArray (0,0) (0:: GL.GLuint)
+  withStorableArray vbo $ \vboPtr -> do
+    GL.glGenBuffers 1 vboPtr
+    x <- readArray vbo 0
+    GL.glBindBuffer GL.GL_ARRAY_BUFFER x 
 
   print "Allocating Vertex Data"
   verts <- newArray @StorableArray (0,10) (0.0 :: Float)
