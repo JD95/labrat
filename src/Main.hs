@@ -34,12 +34,16 @@ main = do
 
 compileShader :: Ptr (Ptr GL.GLchar) -> GL.GLenum -> IO GL.GLuint
 compileShader src ty = do
+  print "Creating a new shader!"
   shader <- GL.glCreateShader ty
   let n = nullPtr @GL.GLint
+  print "Passing in the shader source"
   GL.glShaderSource shader 1 src n
+  print "Compiling"
   GL.glCompileShader shader
   let b = nullPtr @GL.GLint
-  GL.glGetShaderiv shader GL.GL_COMPILE_STATUS b
+  print "Checking shader result"
+--  GL.glGetShaderiv shader GL.GL_COMPILE_STATUS b
   -- TODO: CHECK FOR COMPILATION ERRORS
   pure shader
 
@@ -54,21 +58,15 @@ linkProgram vs fs = do
 
 vertexShader :: IO CString
 vertexShader =
-  newCAString $ "#version 430"
+  newCAString $ "#version 430 core"
              <> "layout(location = 0) in vec4 vPosition;\n"
-             <> "layout(location = 1) in vec4 vColor;\n"
-             <> "out vec4 color;\n"
-             <> "void main() {\n"
-             <> "  color = vec4(1.0, 1.0, 1.0, 1.0);\n"
-             <> "  gl_position = vPosition;}"
+             <> "void main() { gl_position = vPosition; }"
              
 fragShader :: IO CString
 fragShader =
-  newCAString $ "#version 430"
-             <> "in vec4 color;\n"
+  newCAString $ "#version 430 core"
              <> "out vec4 fColor;\n"
-             <> "void main() {\n"
-             <> "  fColor = vec4(0.0, 1.0, 0.0, 1.0);\n"             
+             <> "void main() { fColor = vec4(0.0, 1.0, 0.0, 1.0); }\n"             
 
 game :: IO ()
 game = do
@@ -123,7 +121,7 @@ game = do
   print "Creating Fragment Shader"
   fgShader <- fragShader
   fgPtr <- malloc @ (Ptr GL.GLchar)
-  poke vsPtr fgShader
+  poke fgPtr fgShader
 
   print "Compiling Fragment Shdaer"
   fs <- compileShader fgPtr GL.GL_FRAGMENT_SHADER
