@@ -13,19 +13,23 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
+executable labrat
+  main-is:             Main.hs
+  hs-source-dirs:      src
+  build-depends:       base >= 4.7 && < 5
+                     , sdl2 == 2.3.0
+                     , linear
+                     , OpenGLRaw
+                     , array
+  default-language:    Haskell2010
+                     
 library
   hs-source-dirs:      src
   exposed-modules:     Lib
+                     , LabratCore
   build-depends:       base >= 4.7 && < 5
-  default-language:    Haskell2010
-
-test-suite labrat-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  build-depends:       base
-                     , labrat
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+                     , sdl2 == 2.3.0
+                     , linear
   default-language:    Haskell2010
 
 source-repository head
