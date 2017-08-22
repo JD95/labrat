@@ -66,7 +66,7 @@ fragShader :: IO CString
 fragShader =
   newCAString $ "#version 430 core"
              <> "out vec4 fColor;\n"
-             <> "void main() { fColor = vec4(1.0, 1.0, 1.0, 1.0); }\n"             
+             <> "void main() { fColor = vec4(0.0, 0.0, 1.0, 1.0); }\n"             
 
 game :: IO ()
 game = do
@@ -138,6 +138,8 @@ game = do
   GL.glEnableVertexAttribArray 0
   GL.glVertexAttribPointer 0 2 GL.GL_FLOAT GL.GL_FALSE 0 nullPtr
 
+  GL.glClearColor 1.0 0.3 0.3 1.0
+
   let loop = do
         let collectEvents = do
               e <- SDL.pollEvent
@@ -147,10 +149,8 @@ game = do
         events <- collectEvents
         let quit = elem SDL.QuitEvent $ map SDL.eventPayload events
 
-        -- OPEN GL        
-        GL.glClearColor 1.0 0.3 0.3 1.0
+        -- OPEN GL                
         GL.glClear GL.GL_COLOR_BUFFER_BIT
-
         
         x <- readArray vbo 0
         GL.glBindBuffer GL.GL_ARRAY_BUFFER x 
