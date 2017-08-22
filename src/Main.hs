@@ -19,7 +19,7 @@ import Data.Array.IO
 screenWidth, screenHeight :: CInt
 (screenWidth, screenHeight) = (640, 480)
 
-triangle :: [(Int, Float)]
+triangle :: [(Int, GL.GLfloat)]
 triangle = zip [0..] [0.0, 0.5, 0.5, -0.5, -0.5, -0.5]
 
 main :: IO ()
@@ -66,7 +66,7 @@ fragShader :: IO CString
 fragShader =
   newCAString $ "#version 430 core"
              <> "out vec4 fColor;\n"
-             <> "void main() { fColor = vec4(0.0, 1.0, 0.0, 1.0); }\n"             
+             <> "void main() { fColor = vec4(1.0, 1.0, 1.0, 1.0); }\n"             
 
 game :: IO ()
 game = do
@@ -88,6 +88,8 @@ game = do
   renderer  <- SDL.glCreateContext window
   SDL.glMakeCurrent window renderer
 
+  SDL.swapInterval $= SDL.SynchronizedUpdates
+
   print "Creating VAO"
   vao <- newArray @StorableArray (0,0) (0 :: GL.GLuint)
   withStorableArray vao $ \vaoPtr -> do
@@ -103,12 +105,12 @@ game = do
     GL.glBindBuffer GL.GL_ARRAY_BUFFER x 
 
   print "Allocating Vertex Data"
-  verts <- newArray @StorableArray (0,10) (0.0 :: Float)
+  verts <- newArray @StorableArray (0,6) (0.0 :: Float)
   forM_ triangle $ \(i,e) -> writeArray verts i e
 
   print "Assigning Vertex data to Buffer"
   withStorableArray verts $ \vertsPtr ->
-    GL.glBufferData GL.GL_ARRAY_BUFFER (CPtrdiff . fromIntegral $ sizeOf (0 :: Float)) vertsPtr GL.GL_STATIC_DRAW
+    GL.glBufferData GL.GL_ARRAY_BUFFER (CPtrdiff . fromIntegral . (*) 6 $ sizeOf (0 :: GL.GLfloat)) vertsPtr GL.GL_STATIC_DRAW
 
   print "Creating Vertex Shader"
   vsShader <- vertexShader
@@ -146,12 +148,18 @@ game = do
         let quit = elem SDL.QuitEvent $ map SDL.eventPayload events
 
         -- OPEN GL        
-        GL.glClearColor 0.3 0.3 0.3 1.0
+        GL.glClearColor 1.0 0.3 0.3 1.0
         GL.glClear GL.GL_COLOR_BUFFER_BIT
 
-        GL.glDrawArrays GL.GL_TRIANGLES 0 3
+        
+        x <- readArray vbo 0
+        GL.glBindBuffer GL.GL_ARRAY_BUFFER x 
 
-        SDL.glSwapWindow window
+        GL.glDrawArrays GL.GL_TRIANGLES 0 6
+
+        GL.glFlush
+
+        SDL.glSwapWindow window        
 
         unless quit loop
 
