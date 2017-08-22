@@ -36,15 +36,24 @@ compileShader :: Ptr (Ptr GL.GLchar) -> GL.GLenum -> IO GL.GLuint
 compileShader src ty = do
   print "Creating a new shader!"
   shader <- GL.glCreateShader ty
-  let n = nullPtr @GL.GLint
   print "Passing in the shader source"
-  GL.glShaderSource shader 1 src n
+  GL.glShaderSource shader 1 src nullPtr
   print "Compiling"
   GL.glCompileShader shader
-  let b = nullPtr @GL.GLint
+  b <- newArray @StorableArray (0,0) (0::GL.GLint)
   print "Checking shader result"
---  GL.glGetShaderiv shader GL.GL_COMPILE_STATUS b
-  -- TODO: CHECK FOR COMPILATION ERRORS
+  withStorableArray b $ \bPtr ->
+    GL.glGetShaderiv shader GL.GL_COMPILE_STATUS bPtr
+  result <- readArray b 0
+  when (result == 0) $ do
+    print "COMPILATION FAILED!"
+    withStorableArray b $ \bPtr ->
+      GL.glGetShaderiv shader GL.GL_INFO_LOG_LENGTH bPtr
+    logLength <- readArray b 0
+    infoLog <- newArray @StorableArray (0,100) (CChar 0)
+    withStorableArray infoLog $ \infoLogPtr ->
+      GL.glGetShaderInfoLog shader 100 nullPtr infoLogPtr
+    forM_ [0..99] $ putChar . castCCharToChar <=< readArray infoLog 
   pure shader
 
 
@@ -58,30 +67,31 @@ linkProgram vs fs = do
 
 vertexShader :: IO CString
 vertexShader =
-  newCAString $ "#version 430 core"
-             <> "layout(location = 0) in vec4 vPosition;\n"
-             <> "void main() { gl_position = vPosition; }"
-             
+  newCString $ "#version 430 core\n"
+            <> "layout(location = 0) in vec4 vPosition;\n"
+            <> "void main() { gl_Position = vPosition; }"
+
 fragShader :: IO CString
 fragShader =
-  newCAString $ "#version 430 core"
-             <> "out vec4 fColor;\n"
-             <> "void main() { fColor = vec4(0.0, 0.0, 1.0, 1.0); }\n"             
+  newCString $ "#version 430 core\n"
+            <> "out vec4 fColor;\n"
+            <> "void main() { fColor = vec4(0.0, 1.0, 0.0, 1.0); }\n"             
 
 game :: IO ()
 game = do
   print "More Running!"
   SDL.initialize [SDL.InitVideo]
-  SDL.HintRenderScaleQuality $= SDL.ScaleLinear
+ {- SDL.HintRenderScaleQuality $= SDL.ScaleLinear
   do renderQuality <- SDL.get SDL.HintRenderScaleQuality
      when (renderQuality /= SDL.ScaleLinear) $
        putStrLn "Warning: Linear texture filtering not enabled!"
-
-  let openGLProfile = SDL.Core SDL.Debug 4 3 
+-}
+  let openGLProfile = SDL.defaultOpenGL { SDL.glProfile = SDL.Core SDL.Debug 4 3
+                                        , SDL.glColorPrecision = V4 8 8 8 1
+                                        }
   window <- SDL.createWindow  "SDL / OpenGL Example" $
             SDL.defaultWindow {SDL.windowInitialSize = V2 screenWidth screenHeight,
-                               SDL.windowOpenGL = Just (SDL.defaultOpenGL {SDL.glProfile = openGLProfile })}
-  SDL.showWindow window
+                               SDL.windowOpenGL = Just openGLProfile }
 
   print "Creating GL Context!"
  
@@ -89,6 +99,9 @@ game = do
   SDL.glMakeCurrent window renderer
 
   SDL.swapInterval $= SDL.SynchronizedUpdates
+
+  GL.glClearColor 0.3 0.3 0.3 1.0
+  SDL.glSwapWindow window
 
   print "Creating VAO"
   vao <- newArray @StorableArray (0,0) (0 :: GL.GLuint)
@@ -110,7 +123,8 @@ game = do
 
   print "Assigning Vertex data to Buffer"
   withStorableArray verts $ \vertsPtr ->
-    GL.glBufferData GL.GL_ARRAY_BUFFER (CPtrdiff . fromIntegral . (*) 6 $ sizeOf (0 :: GL.GLfloat)) vertsPtr GL.GL_STATIC_DRAW
+    let stride = CPtrdiff . fromIntegral . (*) 6 $ sizeOf (0 :: GL.GLfloat)        
+    in GL.glBufferData GL.GL_ARRAY_BUFFER stride vertsPtr GL.GL_STATIC_DRAW
 
   print "Creating Vertex Shader"
   vsShader <- vertexShader
@@ -137,8 +151,6 @@ game = do
   print "Shader Plumbing"
   GL.glEnableVertexAttribArray 0
   GL.glVertexAttribPointer 0 2 GL.GL_FLOAT GL.GL_FALSE 0 nullPtr
-
-  GL.glClearColor 1.0 0.3 0.3 1.0
 
   let loop = do
         let collectEvents = do
