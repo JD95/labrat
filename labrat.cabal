@@ -21,12 +21,14 @@ executable labrat
                      , linear
                      , OpenGLRaw
                      , array
+                     , protolude
+                     , ghc-prim
+                     , hvect
   default-language:    Haskell2010
                      
 library
   hs-source-dirs:      src
   exposed-modules:     Lib
-                     , LabratCore
   build-depends:       base >= 4.7 && < 5
                      , sdl2 == 2.3.0
                      , linear
