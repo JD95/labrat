@@ -16,6 +16,8 @@ import Data.Array.MArray
 import Data.Array.Storable
 import Data.Array.IO
 
+import Model
+
 screenWidth, screenHeight :: CInt
 (screenWidth, screenHeight) = (640, 480)
 
@@ -97,24 +99,11 @@ game = do
   GL.glClearColor 0.3 0.3 0.3 1.0
   SDL.glSwapWindow window
 
-  print "Creating VAO"
-  vao <- malloc @GL.GLuint
-  GL.glGenVertexArrays 1 vao
-  GL.glBindVertexArray =<< peek vao
-
-  print "Creating VBO"
-  vbo <- malloc @GL.GLuint
-  GL.glGenBuffers 1 vbo
-  GL.glBindBuffer GL.GL_ARRAY_BUFFER =<< peek vbo
-
   print "Allocating Vertex Data"
   verts <- newArray @StorableArray (0,6) (0.0 :: Float)
   forM_ triangle $ \(i,e) -> writeArray verts i e
 
-  print "Assigning Vertex data to Buffer"
-  withStorableArray verts $ \vertsPtr ->
-    let stride = CPtrdiff . fromIntegral . (*) 6 $ sizeOf (0 :: GL.GLfloat)        
-    in GL.glBufferData GL.GL_ARRAY_BUFFER stride vertsPtr GL.GL_STATIC_DRAW
+  (BasicModel _ (Vbo vbo)) <- basicModel verts 6
 
   print "Creating Vertex Shader"
   vsShader <- vertexShader
@@ -154,7 +143,7 @@ game = do
         -- OPEN GL           
         GL.glClear GL.GL_COLOR_BUFFER_BIT
                  
-        GL.glBindBuffer GL.GL_ARRAY_BUFFER =<< peek vbo
+        GL.glBindBuffer GL.GL_ARRAY_BUFFER vbo
 
         GL.glDrawArrays GL.GL_TRIANGLES 0 6
 
