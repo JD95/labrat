@@ -26,6 +26,10 @@ newtype Vbo b d = Vbo GLuint
 
 data BasicModel = BasicModel Vao (Vbo ArrayBuffer GLfloat)
 
+class VertexArray a where
+  vaoId :: a -> GLuint
+
+
 basicModel :: StorableArray Int Float -> Int -> IO BasicModel
 basicModel vs size = do
   print "Creating VAO"
